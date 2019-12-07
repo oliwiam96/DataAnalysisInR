@@ -1,0 +1,2 @@
+"0","training <- training_valid_all[ inTraining,]"
+"0","validating  <- training_valid_all[-inTraining,]"

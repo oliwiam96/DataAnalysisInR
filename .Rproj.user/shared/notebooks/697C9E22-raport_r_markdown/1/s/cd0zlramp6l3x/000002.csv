@@ -1,0 +1,7 @@
+"0","ggplot(data = plot_data, aes(x=year, y=mean_length, group=1)) +"
+"0","  geom_line(size=1, color=""steelblue"") +"
+"0","  geom_smooth(method=""lm"", fill=""lightgreen"", color=""darkgreen"") +"
+"0","  geom_ribbon(aes(ymin = from, ymax = to), alpha = 0.3, fill=""lightblue"", color = ""transparent"") +"
+"0","  xlab(""lata"") +"
+"0","  ylab(""długość śledzia"") +"
+"0","  theme_minimal()"

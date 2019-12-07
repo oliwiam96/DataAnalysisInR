@@ -1,0 +1,7 @@
+"0","ctrl <- trainControl("
+"0","    # powtórzona ocena krzyżowa"
+"0","    method = ""repeatedcv"","
+"0","    # liczba podziałów"
+"0","    number = 5,"
+"0","    # liczba powtórzeń"
+"0","    repeats = 3)"

@@ -1,0 +1,3 @@
+"0","meltData <- melt(data, id.vars=""X"")"
+"0","p <- ggplot(meltData, aes(factor(variable), value)) "
+"0","p + geom_boxplot() + facet_wrap(~variable, scale=""free"")"

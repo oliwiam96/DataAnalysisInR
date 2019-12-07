@@ -1,0 +1,10 @@
+"0","library(dplyr)"
+"0","library(ggplot2)"
+"0","library(reshape2)"
+"0","library(caret)"
+"2","£adowanie wymaganego pakietu: lattice
+"
+"2","Registered S3 method overwritten by 'data.table':
+  method           from
+  print.data.table     
+"

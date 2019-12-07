@@ -1,0 +1,5 @@
+"0","preprocessed_model <- train(length ~ .,"
+"0","               data = training,"
+"0","               trControl = ctrl,"
+"0","               preProcess = c('scale', 'center'),"
+"0","               method = ""lm"")"

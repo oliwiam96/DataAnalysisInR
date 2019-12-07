@@ -1,0 +1,5 @@
+"0","  get_upper_tri <- function(cormat){"
+"0","    cormat[lower.tri(cormat)]<- NA"
+"0","    return(cormat)"
+"0","  }"
+"0","upper_tri <- get_upper_tri(cormat)"

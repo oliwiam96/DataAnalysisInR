@@ -1,0 +1,8 @@
+"0","numberOfYears = 60"
+"0","rowsInYear = ceiling( nrow(data) / 60)"
+"0","print(rowsInYear)"
+"1","[1]"
+"1"," 877"
+"1","
+"
+"0","data_years <- data %>%  mutate(year = floor(X/rowsInYear) + 1)"

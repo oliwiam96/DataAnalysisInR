@@ -1,0 +1,5 @@
+"0","inTrainingValidAll <- "
+"0","    createDataPartition("
+"0","        y = data_reduced$length,"
+"0","        p = .8,"
+"0","        list = FALSE)"

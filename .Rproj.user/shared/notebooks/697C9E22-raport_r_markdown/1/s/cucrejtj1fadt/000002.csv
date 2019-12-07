@@ -1,0 +1,7 @@
+"0","ggplot(mapping=aes(alpha=0.4)) + "
+"0"," geom_density(aes(training$length, fill=""zbiór treningowy""), training) + "
+"0"," geom_density(aes(validating$length, fill=""zbiór walidacyjny""), validating) + "
+"0"," geom_density(aes(testing$length, fill=""zbiór testowy""), testing) + "
+"0"," theme_minimal() +"
+"0","  xlab(""Długość śledzia"") +"
+"0","  ylab(""Gęstość prawdopodobieństwa"") "

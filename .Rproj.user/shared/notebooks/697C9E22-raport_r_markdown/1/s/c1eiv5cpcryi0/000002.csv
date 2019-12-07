@@ -1,0 +1,4 @@
+"0","ggplot(data = data, aes(x=X, y=length, group=1)) +"
+"0","  geom_line(color=""steelblue"") +"
+"0","  geom_smooth(method=""lm"", fill=""lightgreen"", color=""darkgreen"", alpha=0.4) +"
+"0","  theme_grey()"

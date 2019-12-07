@@ -1,0 +1,2 @@
+"0","all_data <- read.csv(""sledzie.csv"", na.string=""?"")"
+"0","head(all_data)"

@@ -1,0 +1,22 @@
+{
+    "collab_server" : "",
+    "contents" : "",
+    "created" : 1575677366357.000,
+    "dirty" : false,
+    "encoding" : "UTF-8",
+    "folds" : "",
+    "hash" : "0",
+    "id" : "637B4302",
+    "lastKnownWriteTime" : 1575678502,
+    "last_content_update" : 1575678502466,
+    "path" : "~/Oliwia_Masian_EMD/app.R",
+    "project_path" : "app.R",
+    "properties" : {
+        "cursorPosition" : "28,0",
+        "scrollLine" : "16"
+    },
+    "relative_order" : 1,
+    "source_on_save" : false,
+    "source_window" : "",
+    "type" : "r_source"
+}

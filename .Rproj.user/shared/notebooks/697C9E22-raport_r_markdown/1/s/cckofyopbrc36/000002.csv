@@ -1,0 +1,4 @@
+"0","sum_variance <- cumsum(pca$sdev^2 / sum(pca$sdev^2))"
+"0","df <- data.frame(sum_variance = sum_variance,"
+"0","                n=1:length(sum_variance))"
+"0","df"

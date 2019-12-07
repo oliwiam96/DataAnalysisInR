@@ -1,0 +1,4 @@
+"0","par(mfrow=c(2,5))"
+"0","for (i in 1:length(data)) {"
+"0","        hist(data[,i], main=names(data[i]), xlab="""")"
+"0","}"

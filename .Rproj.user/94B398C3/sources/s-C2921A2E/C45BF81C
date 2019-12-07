@@ -1,0 +1,24 @@
+{
+    "collab_server" : "",
+    "contents" : "",
+    "created" : 1575678105159.000,
+    "dirty" : false,
+    "encoding" : "UTF-8",
+    "folds" : "",
+    "hash" : "0",
+    "id" : "C45BF81C",
+    "lastKnownWriteTime" : 1575678792,
+    "last_content_update" : 1575679208194,
+    "path" : "~/Oliwia_Masian_EMD/raport_r_markdown.Rmd",
+    "project_path" : "raport_r_markdown.Rmd",
+    "properties" : {
+        "cursorPosition" : "442,0",
+        "last_setup_crc32" : "C2921A2Ebb338d19",
+        "scrollLine" : "442",
+        "tempName" : "Untitled1"
+    },
+    "relative_order" : 2,
+    "source_on_save" : false,
+    "source_window" : "",
+    "type" : "r_markdown"
+}

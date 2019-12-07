@@ -1,0 +1,622 @@
+---
+title: "Sprawozdanie 1"
+author: "Oliwia Masain"
+date: "6 grudnia 2019"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Projekt z analizy danych
+## Oliwia Masian 127324 grupa wtorki 16:50
+
+Celem analizy jest odkrycie przyczyn zmniejszania się rozmiaru śledzia europejskiego.
+
+## 1. Kod wyliczający wykorzystane biblioteki.
+
+
+```{R}
+library(dplyr)
+library(ggplot2)
+library(reshape2)
+library(caret)
+```
+
+## 2. Kod zapewniający powtarzalność wyników przy każdym uruchomieniu raportu na tych samych danych.
+
+
+```{r}
+set.seed(42)
+```
+
+## 3. Kod pozwalający wczytać dane z pliku.
+
+Na przestrzeni ostatnich lat zauważono stopniowy spadek rozmiaru śledzia oceanicznego wyławianego w Europie. Do analizy zebrano pomiary śledzi i warunków w jakich żyją z ostatnich 60 lat. Dane były pobierane z połowów komercyjnych jednostek. W ramach połowu jednej jednostki losowo wybierano od 50 do 100 sztuk trzyletnich śledzi.
+
+Kolejne kolumny w zbiorze danych to:
+
+    length: długość złowionego śledzia [cm];
+    cfin1: dostępność planktonu [zagęszczenie Calanus finmarchicus gat. 1];
+    cfin2: dostępność planktonu [zagęszczenie Calanus finmarchicus gat. 2];
+    chel1: dostępność planktonu [zagęszczenie Calanus helgolandicus gat. 1];
+    chel2: dostępność planktonu [zagęszczenie Calanus helgolandicus gat. 2];
+    lcop1: dostępność planktonu [zagęszczenie widłonogów gat. 1];
+    lcop2: dostępność planktonu [zagęszczenie widłonogów gat. 2];
+    fbar: natężenie połowów w regionie [ułamek pozostawionego narybku];
+    recr: roczny narybek [liczba śledzi];
+    cumf: łączne roczne natężenie połowów w regionie [ułamek pozostawionego narybku];
+    totaln: łączna liczba ryb złowionych w ramach połowu [liczba śledzi];
+    sst: temperatura przy powierzchni wody [°C];
+    sal: poziom zasolenia wody [Knudsen ppt];
+    xmonth: miesiąc połowu [numer miesiąca];
+    nao: oscylacja północnoatlantycka [mb].
+
+Wiersze w zbiorze są uporządkowane chronologicznie.
+
+Wczytajmy dane do zmiennej all_data
+
+
+```{r}
+all_data <- read.csv("sledzie.csv", na.string="?")
+head(all_data)
+```
+
+
+```{r}
+sapply(all_data, class)
+```
+
+Widzimy brakujące wartości (NA). Zgodnie z oczekiwaniami wszystkie kolumny zostały potraktowane jako liczby.
+
+## 4. Kod przetwarzający brakujące dane.
+
+Spróbujmy usunąć te wiersze, które zawierają puste wartości.
+
+
+```{r}
+complete_indexes <- complete.cases(all_data)
+data_complete <- all_data[complete_indexes, ]
+print(nrow(data_complete))
+print(nrow(all_data))
+print(nrow(data_complete)/nrow(all_data))
+```
+
+Brakujące dane to aż 20% (ponad 10 000 rekordów). Szkoda marnować zawarty w nich potencjał. Uzupełnijmy je średnią, wcześniej tylko upewnijmy się, że rozkłady nie są zbyt skośne (odpowiadające średnie i mediany nie leżą zbyt daleko od siebie).
+
+
+```{r}
+for(i in 1:ncol(all_data)){
+    cat("mean: ", mean(all_data[,i], na.rm = TRUE), "median: ", median(all_data[,i], na.rm = TRUE), "\n")
+}
+```
+
+
+```{r}
+data <- all_data
+for(i in 1:ncol(data)){
+    data[is.na(data[,i]), i] <- median(data[,i], na.rm = TRUE)
+}
+```
+
+Sprawdźmy wynik transformacji.
+
+
+```{r}
+head(data)
+```
+
+
+```{r}
+sapply(data, function(x) sum(is.na(x)))
+```
+
+W danych nie ma już brakujących wartości.
+
+## 5. Sekcja podsumowująca rozmiar zbioru i podstawowe statystyki.
+
+
+```{r}
+nrow(data)
+```
+
+
+```{r}
+summary(data)
+```
+
+Zbiór liczy 52582 rekordów. Średnia długość śledzia to 25.3 cm.
+
+## 6. Szczegółowa analiza wartości atrybutów (np. poprzez prezentację rozkładów wartości).
+
+Spróbujmy zwizualizować dane zwrócone przez funkcję summary. Użyjemy do tego wykresów pudełkowych i histogramów.
+
+
+```{r}
+meltData <- melt(data, id.vars="X")
+p <- ggplot(meltData, aes(factor(variable), value)) 
+p + geom_boxplot() + facet_wrap(~variable, scale="free")
+```
+
+Jak widzimy w przypadku długości śledzia średnia jest w przybliżeniu w równej odległości od kwartyli Q1 i Q3. Pojawia się wiele outlierów.
+
+Również dla zmiennej sal (poziom zasolenia) jest wiele wartości odstających, widocznie występują miejsca o szczególnie wysokim i niskim zasoleniu (np. niskie tam, gdzie rzeki wpadają do morza).
+
+Dla zmiennej cfin1 (dostępność planktonu [zagęszczenie Calanus finmarchicus gat. 1]) obserwujemy niesymetryczny rozkład - albo tego rodzaju planktonu jest bardzo niewiele (w większości przypadków) albo bardzo dużo.
+
+Spójrzmy na histogramy.
+
+
+```{r}
+par(mfrow=c(2,5))
+for (i in 1:length(data)) {
+        hist(data[,i], main=names(data[i]), xlab="")
+}
+```
+
+Do podobnych wniosków dochodzimy obserwując histogramy - rozkład cfin1 jest silnie prawoskośny, podobnie cfin2 i lcop1.
+
+## 7. Sekcja sprawdzająca korelacje między zmiennymi; sekcja ta powinna zawierać jakąś formę graficznej prezentacji korelacji.
+
+Po pierwsze zobaczmy, jak wielkość śledzia (length) zależy od czasu (X).
+
+
+```{r}
+ggplot(data = data, aes(x=X, y=length, group=1)) +
+  geom_line(color="steelblue") +
+  geom_smooth(method="lm", fill="lightgreen", color="darkgreen", alpha=0.4) +
+  theme_grey()
+```
+
+Widzimy tendencję malejącą, jednak wykres nie jest zbyt czytelny. Spróbujmy pogrupować dane.
+
+W opisie danych jest informacja, że w zmiennej xmonth przechowywany jest miesiąc połowu.
+
+
+```{r}
+head(data$xmonth, 100)
+```
+
+Okazuje się, że miesiące nie są podane chronologicznie ("6 6 5 5 3 3 3 6"), zatem nie można pogrupować na ich podstawie danych w lata.
+
+Sprawdźmy zmienną recr, która opisuje roczny narybek.
+
+
+```{r}
+length(unique(data$recr))
+```
+
+Przez 60 lat spodziewalibyśmy się 60 różnych wartości. Okazuje się, że jest ich 52, więc ta zmienna również się nie przyda.
+Pogrupujmy zatem dane w kubełki o równej liczności (za wyjątkiem ostatniego) na podstawie kolejności chronologicznej (X).
+
+
+```{r}
+numberOfYears = 60
+rowsInYear = ceiling( nrow(data) / 60)
+print(rowsInYear)
+data_years <- data %>%  mutate(year = floor(X/rowsInYear) + 1)
+```
+
+
+```{r}
+head(data_years, 5)
+tail(data_years, 5)
+```
+
+
+```{r}
+plot_data <- data_years %>% group_by(year) %>% summarize(mean_length=mean(length), from = mean(length) - sd(length), to = mean(length) + sd(length))
+plot_data
+```
+
+
+```{r}
+ggplot(data = plot_data, aes(x=year, y=mean_length, group=1)) +
+  geom_line(size=1, color="steelblue") +
+  geom_smooth(method="lm", fill="lightgreen", color="darkgreen") +
+  geom_ribbon(aes(ymin = from, ymax = to), alpha = 0.3, fill="lightblue", color = "transparent") +
+  xlab("lata") +
+  ylab("długość śledzia") +
+  theme_minimal()
+
+```
+
+Wykres jest czytelniejszy, widzimy, że długość śledzia maleje w czasie.
+
+Narysujmy macierz korelacji.
+
+
+```{r}
+cormat <- round(cor(data), 2)
+cormat
+```
+
+
+```{r}
+melted_cormat <- melt(cormat)
+head(melted_cormat)
+```
+
+
+```{r}
+  get_upper_tri <- function(cormat){
+    cormat[lower.tri(cormat)]<- NA
+    return(cormat)
+  }
+
+upper_tri <- get_upper_tri(cormat)
+```
+
+
+```{r}
+melted_cormat <- melt(upper_tri, na.rm = TRUE)
+```
+
+
+```{r}
+ggheatmap <- ggplot(data = melted_cormat, aes(Var2, Var1, fill = value))+
+ geom_tile(color = "white")+
+ scale_fill_gradient2(low = "blue", high = "red", mid = "white", 
+   midpoint = 0, limit = c(-1,1), space = "Lab", 
+   name="Pearson\nCorrelation") +
+  theme_minimal()+ 
+  theme(axis.text.x = element_text(angle = 45, vjust = 1, 
+    size = 12, hjust = 1))+
+  coord_fixed()
+
+```
+
+
+```{r}
+ggheatmap + 
+geom_text(aes(Var2, Var1, label = value), color = "black", size = 2.5) +
+theme(
+  axis.title.x = element_blank(),
+  axis.title.y = element_blank(),
+  panel.grid.major = element_blank(),
+  panel.border = element_blank(),
+  panel.background = element_blank(),
+  axis.ticks = element_blank(),
+  legend.justification = c(1, 0),
+  legend.position = c(0.6, 0.7),
+  legend.direction = "horizontal")+
+  guides(fill = guide_colorbar(barwidth = 7, barheight = 1,
+                title.position = "top", title.hjust = 0.5))
+```
+
+Widzimy, że zmienne lcop1 (zagęszczenie widłonogów gat. 1) i chel1(zagęszczenie Calanus helgolandicus gat. 1) są bardzo mocno ze sobą skorelowane, więc jedną z nich można potencjalnie usunąć ze względu na redundancję. Podobnie lcop2 i chel2.
+
+Duży współczynnik korelacji mają także cumf i fbar (obie zmienne opisują ułamek pozostawionego narybku). Cumf i length są praktycznie w ogóle nieskorelowane, dlatego decydujemy się usunąć cumf (jej wpływ na length jest prawie zerowy, więc można ją bezpiecznie usunąć).
+
+
+```{r}
+data_reduced <- select(data, -c(chel1, chel2, cumf, X))
+```
+
+Ostatnim krokiem w tej sekcji będzie dokonanie analizy głównych składowych (PCA).
+Ma to na celu zbadanie istotności cech.
+
+
+```{r}
+pca <- prcomp(data, center = TRUE,scale. = TRUE)
+
+summary(pca)
+```
+
+
+```{r}
+sum_variance <- cumsum(pca$sdev^2 / sum(pca$sdev^2))
+df <- data.frame(sum_variance = sum_variance,
+                n=1:length(sum_variance))
+df
+```
+
+
+```{r}
+ggplot(data=df, aes(x=n, y=sum_variance)) +
+  geom_bar(stat="identity", fill="steelblue")+
+  theme_minimal() +
+  xlab("n") +
+  ylab("% wyjaśnianej wariancji") 
+```
+
+Na wykresie przedstawiono skumulowaną sumę wyjaśnianej wariancji dla pierwszych n głównych składowych.
+
+Procent wyjaśnianej waraiancji gwałtownie rośnie dla pierwszych kilku n, a nasyca się w okolicach n = 11,
+skąd można wysnuć wniosek, że nie wszystkie cechy są istotne i można zmniejszyć wymiarowość problemu.
+
+## 8. Interaktywny wykres lub animacja prezentującą zmianę rozmiaru śledzi w czasie.
+
+# *WYKRES STWORZONO PRZY UŻYCIU SHINY I ZNAJDUJE SIĘ W OSOBNYCH PLIKACH (SERVER I UI).*
+
+## 9. Sekcja próbującą stworzyć regresor przewidujący rozmiar śledzia; dobór parametrów modelu oraz oszacowanie jego skuteczności powinny zostać wykonane za pomocą techniki podziału zbioru na dane uczące, walidujące i testowe; trafność regresji powinna zostać oszacowana na podstawie miar *R2* i *RMSE*.
+
+Przypomijmy, że w wyniku analizy korelacji zdecydowaliśmy się na usunięcie zmiennych chel1, chel2, cumf, X ze względu na to, że przedstawia numer wiersza także decydujemy się usunąć.
+
+
+```{r}
+data_reduced <- select(data, -c(chel1, chel2, cumf, X))
+```
+
+Przeprowadzamy podział na zbiory treningowy (do nauki), walidacyjny (do walidacji najlepszych parametrów) i testowy (na którym zdecydujemy się przetestować najlepszy algorytm).
+
+
+```{r}
+inTrainingValidAll <- 
+    createDataPartition(
+        y = data_reduced$length,
+        p = .8,
+        list = FALSE)
+```
+
+
+```{r}
+training_valid_all <- data_reduced[ inTrainingValidAll,]
+testing  <- data_reduced[-inTrainingValidAll,]
+```
+
+
+```{r}
+inTraining <- 
+    createDataPartition(
+        y = training_valid_all$length,
+        p = .8,
+        list = FALSE)
+```
+
+
+```{r}
+training <- training_valid_all[ inTraining,]
+validating  <- training_valid_all[-inTraining,]
+```
+
+
+```{r}
+print(nrow(training))
+print(nrow(validating))
+print(nrow(testing))
+print(nrow(data))
+```
+
+
+```{r}
+ggplot(mapping=aes(alpha=0.4)) + 
+ geom_density(aes(training$length, fill="zbiór treningowy"), training) + 
+ geom_density(aes(validating$length, fill="zbiór walidacyjny"), validating) + 
+ geom_density(aes(testing$length, fill="zbiór testowy"), testing) + 
+ theme_minimal() +
+  xlab("Długość śledzia") +
+  ylab("Gęstość prawdopodobieństwa") 
+```
+
+Widzimy, że próbkowanie zbioru danych nastąpiło poprawnie, w każdym typie zbioru występuje podobny rozkład zmiennej wyjściowej.
+
+
+```{r}
+basic_model <- train(length ~ .,
+               data = training,
+               method = "lm")
+basic_model
+```
+
+Rozszerzmy model o powtarzaną kroswalidację.
+
+
+```{r}
+ctrl <- trainControl(
+    # powtórzona ocena krzyżowa
+    method = "repeatedcv",
+    # liczba podziałów
+    number = 5,
+    # liczba powtórzeń
+    repeats = 3)
+```
+
+
+```{r}
+model <- train(length ~ .,
+               data = training,
+               trControl = ctrl,
+               method = "lm")
+model
+```
+
+
+```{r}
+ggplot(varImp(model))
+```
+
+
+```{r}
+preprocessed_model <- train(length ~ .,
+               data = training,
+               trControl = ctrl,
+               preProcess = c('scale', 'center'),
+               method = "lm")
+```
+
+
+```{r}
+preprocessed_model
+```
+
+Preprocessing danych (skalowanie i centrowanie) niewiele pomogły. Spróbujmy innych rodzajów regresji.
+
+
+```{r}
+lasso_model <- train(length ~ .,
+               data = training,
+               trControl = ctrl,
+               preProcess = c('scale', 'center'),
+               method = "lasso")
+```
+
+
+```{r}
+lasso_model
+```
+
+
+```{r}
+ridge_model <- train(length ~ .,
+               data = training,
+               trControl = ctrl,
+               preProcess = c('scale', 'center'),
+               method = "ridge")
+ridge_model
+```
+
+Root mean squared error (RMSE, błąd średniokwadratowy) oblicza się ze wzoru $sqrt(mean((pred - obs)^2$
+
+
+$pred$ to przewidziane przez model wartości, a $obs$ to faktycznie zaobserwowane dane wyjściowe
+
+R-squared ($R^2$) to współczynnik mówiący o tym jak dobrze dane wyliczone za pomocą modelu pasują do danych prawdziwych (współczynnik korelacji między nimi do kwadratu), zatem chcemy minimalizować RMSE i maksymualizować R-squared.
+
+
+```{r}
+predictions <- predict(model, validating)
+postResample(pred = predictions, obs = validating$length)
+```
+
+
+```{r}
+predictions <- predict(preprocessed_model, validating)
+postResample(pred = predictions, obs = validating$length)
+```
+
+
+```{r}
+predictions <- predict(lasso_model, validating)
+postResample(pred = predictions, obs = validating$length)
+```
+
+
+```{r}
+predictions <- predict(ridge_model, validating)
+postResample(pred = predictions, obs = validating$length)
+```
+
+Wszystkie modele działają praktycznie tak samo. Spróbujmy jeszcze wytrenować regresor na wszystkich kolumnach.
+
+
+```{r}
+all_training_valid_all <- data[ inTrainingValidAll,]
+all_testing  <- data[-inTrainingValidAll,]
+all_training <- data[ inTraining,]
+all_validating  <- data[-inTraining,]
+```
+
+
+```{r}
+all_ridge_model <- train(length ~ .,
+               data = all_training,
+               trControl = ctrl,
+               preProcess = c('scale', 'center'),
+               method = "ridge")
+all_ridge_model
+```
+
+
+```{r}
+predictions <- predict(all_ridge_model, all_validating)
+postResample(pred = predictions, obs = all_validating$length)
+```
+
+Biorąc pod uwagę RMSE można wysnuć wniosek, że redukcja atrybutów była dobrym posunięciem.
+
+## 10. Analiza ważności atrybutów najlepszego znalezionego modelu regresji.
+Przyjrzyjmy się najważniejszym cechom według trenowanych modeli regresji.
+
+
+```{r}
+ggplot(varImp(preprocessed_model))
+```
+
+
+```{r}
+ggplot(varImp(lasso_model))
+```
+
+
+```{r}
+ggplot(varImp(ridge_model))
+```
+
+W badanych modelach dużą ważność mają następujące cechy:
+- sst (temperatura przy powierzchni wody [°C])
+- fbar (natężenie połowów w regionie [ułamek pozostawionego narybku])
+- nao (nao: oscylacja północnoatlantycka [mb]) - w regresjach typu lasso i ridge
+- lcop1: dostępność planktonu [zagęszczenie widłonogów gat. 1]
+
+
+Stąd można wysnuć wniosek, że na wielkość śledzia mają największy wpływ powyższe czynniki.
+
+Uznajmy, że model ridge za osteczny i dokonajmy predykcji na zbiorze testowym.
+
+
+```{r}
+test_predictions <- predict(ridge_model, testing)
+postResample(pred = test_predictions, obs = testing$length)
+```
+
+
+```{r}
+ggplot(testing, aes(all_testing$X)) +
+ geom_line(aes(y = testing$length, colour = "blue")) +
+ geom_line(aes(y = test_predictions, colour = "green")) +
+ xlab("X") +
+ ylab("length") + 
+ scale_color_discrete(name = "Y series", labels = c("ground truth", "predicted")) +
+ theme_grey()
+```
+
+Model dobrze przewiduje długość śledzia w poszczególnych okresach, nie uwzględnia dużych wahań długości w krótkich odstępach czasu (generalizuje).
+
+Na koniec zwizualizujmy zależności między odkrytymi ważnymi cechami a zmienną y (length, długość śledzia)
+
+
+```{r}
+by_sst <- data %>%
+  group_by(sst) %>%
+  summarise(sst_mean = mean(sst), length_mean = mean(length))
+ggplot(by_sst,  aes(x=sst_mean,y=length_mean)) +
+geom_point() + geom_smooth(method='lm')
+```
+
+Im wyższa temperatura przy powierzchni, tym krótsze śledzie.
+
+
+```{r}
+by_fbar <- data %>%
+  group_by(fbar) %>%
+  summarise(fbar_mean = mean(fbar), length_mean = mean(length))
+ggplot(by_fbar,  aes(x=fbar_mean,y=length_mean)) +
+geom_point() + geom_smooth(method='lm')
+```
+
+Im więcej pozostanie narybku, tym dłuższe śledzie.
+
+
+```{r}
+by_nao <- data %>%
+  group_by(nao) %>%
+  summarise(nao_mean = mean(nao), length_mean = mean(length))
+ggplot(by_nao,  aes(x=nao_mean,y=length_mean)) +
+geom_point() + geom_smooth(method='lm')
+```
+
+Im większe nao (Oscylacja północnoatlantycka), tym krótsze śledzie.
+
+
+```{r}
+by_lcop1 <- data %>%
+  group_by(lcop1) %>%
+  summarise(lcop1_mean = mean(lcop1), length_mean = mean(length))
+ggplot(by_lcop1,  aes(x=lcop1_mean,y=length_mean)) +
+geom_point() + geom_smooth(method='lm')
+```
+
+Im większa dostępność planktonu [zagęszczenie widłonogów gat. 1], tym dłuższe śledzie.
+
